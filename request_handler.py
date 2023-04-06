@@ -1,9 +1,9 @@
 import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from views import get_all_orders, get_single_order
-from views import get_all_styles, get_single_style
-from views import get_all_sizes, get_single_size
-from views import get_all_metals, get_single_metal
+from views import get_all_orders, get_single_order, create_order, delete_order, update_order
+from views import get_all_styles, get_single_style, create_style, delete_style, update_style
+from views import get_all_sizes, get_single_size, create_size, delete_sizes, update_size
+from views import get_all_metals, get_single_metal, create_metal, delete_metal, update_metal
 
 
 class HandleRequests(BaseHTTPRequestHandler):
@@ -74,16 +74,97 @@ class HandleRequests(BaseHTTPRequestHandler):
 
     def do_POST(self):
         """Handles POST requests to the server """
+        # Set response code to 'Created'
         self._set_headers(201)
 
         content_len = int(self.headers.get('content-length', 0))
         post_body = self.rfile.read(content_len)
-        response = { "payload" : post_body }
-        self.wfile.write(json.dumps(response).encode())
+
+        # Convert JSON string to a Python dictionary
+        post_body = json.loads(post_body)
+
+        # Parse the URL
+        (resource, id) = self.parse_url(self.path)
+
+        # Initialize new animal
+        new_order = None
+        new_metal = None
+        new_style = None
+        new_size = None
+
+        if resource == "orders":
+            new_order = create_order(post_body)
+            self.wfile.write(json.dumps(new_order).encode())
+        
+        if resource == "metals":
+            new_metal = create_metal(post_body)
+            self.wfile.write(json.dumps(new_metal).encode())
+
+        if resource == "styles":
+            new_style = create_style(post_body)
+            self.wfile.write(json.dumps(new_style).encode())
+            
+        if resource == "sizes":
+            new_size = create_size(post_body)
+            self.wfile.write(json.dumps(new_size).encode())
+    
+    def do_DELETE(self):
+        """Handles DELETE requests to the server"""
+        # Set a 204 response code
+        self._set_headers(204)
+
+        # Parse the URL
+        (resource, id) = self.parse_url(self.path)
+
+        
+        if resource == "metals":
+            delete_metal(id)
+        
+        self.wfile.write("".encode())
+        if resource == "orders":
+            delete_order(id)
+        
+        self.wfile.write("".encode())
+        if resource == "styles":
+            delete_style(id)
+        
+        self.wfile.write("".encode())
+        if resource == "sizes":
+            delete_sizes(id)
+        
+        self.wfile.write("".encode())
 
     def do_PUT(self):
-        """Handles PUT requests to the server """
-        self.do_POST()
+        """Handles PUT requests to the server"""
+        self._set_headers(204)
+        content_len = int(self.headers.get('content-length', 0))
+        post_body = self.rfile.read(content_len)
+        post_body = json.loads(post_body)
+
+        # Parse the URL
+        (resource, id) = self.parse_url(self.path)
+
+        
+        if resource == "metals":
+            update_metal(id, post_body)
+
+        
+        self.wfile.write("".encode())
+        if resource == "orders":
+            update_order(id, post_body)
+
+        
+        self.wfile.write("".encode())
+        if resource == "styles":
+            update_style(id, post_body)
+
+        
+        self.wfile.write("".encode())
+        if resource == "sizes":
+            update_size(id, post_body)
+
+        
+        self.wfile.write("".encode())
 
     def _set_headers(self, status):
         """Sets the status code, Content-Type and Access-Control-Allow-Origin
