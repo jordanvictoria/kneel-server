@@ -34,7 +34,7 @@ class HandleRequests(BaseHTTPRequestHandler):
 
     def do_GET(self):
         """Handles GET requests to the server """
-        self._set_headers(200)
+        # self._set_headers(200)
 
         response = {}  # Default response
 
@@ -44,6 +44,9 @@ class HandleRequests(BaseHTTPRequestHandler):
         if resource == "metals":
             if id is not None:
                 response = get_single_metal(id)
+                if response is None:
+                    self._set_headers(404)
+                    response = { "message": "That metal is not currently in stock for jewelry." }
 
             else:
                 response = get_all_metals()
@@ -52,6 +55,9 @@ class HandleRequests(BaseHTTPRequestHandler):
         if resource == "sizes":
             if id is not None:
                 response = get_single_size(id)
+                if response is None:
+                    self._set_headers(404)
+                    response = { "message": "That size is not currently in stock for jewelry." }
 
             else:
                 response = get_all_sizes()
@@ -59,6 +65,9 @@ class HandleRequests(BaseHTTPRequestHandler):
         if resource == "styles":
             if id is not None:
                 response = get_single_style(id)
+                if response is None:
+                    self._set_headers(404)
+                    response = { "message": "That style is not currently in stock for jewelry." }
 
             else:
                 response = get_all_styles()
@@ -66,16 +75,21 @@ class HandleRequests(BaseHTTPRequestHandler):
         if resource == "orders":
             if id is not None:
                 response = get_single_order(id)
+                if response is None:
+                    self._set_headers(404)
+                    response = { "message": "That order was never placed, or was cancelled." }
 
             else:
                 response = get_all_orders()
+        if response is not None:
+            self._set_headers(200)
 
         self.wfile.write(json.dumps(response).encode())
 
     def do_POST(self):
         """Handles POST requests to the server """
         # Set response code to 'Created'
-        self._set_headers(201)
+        # self._set_headers(201)
 
         content_len = int(self.headers.get('content-length', 0))
         post_body = self.rfile.read(content_len)
@@ -93,46 +107,80 @@ class HandleRequests(BaseHTTPRequestHandler):
         new_size = None
 
         if resource == "orders":
-            new_order = create_order(post_body)
+            if "metalId" in post_body and "sizeId" in post_body and "styleId" in post_body:
+                self._set_headers(201)
+                new_order= create_order(post_body)
+            else:
+                self._set_headers(400)
+                new_order = {
+                "message": f'{"metalId is required" if "metalId" not in post_body else ""} {"sizeId is required" if "sizeId" not in post_body else ""} {"styleId is required" if "styleId" not in post_body else ""}'
+                }
             self.wfile.write(json.dumps(new_order).encode())
         
         if resource == "metals":
-            new_metal = create_metal(post_body)
+            if "metal" in post_body and "price" in post_body:
+                self._set_headers(201)
+                new_metal= create_metal(post_body)
+            else:
+                self._set_headers(400)
+                new_metal = {
+                "message": f'{"metal is required" if "metal" not in post_body else ""} {"price is required" if "price" not in post_body else ""}'
+                }
             self.wfile.write(json.dumps(new_metal).encode())
 
         if resource == "styles":
-            new_style = create_style(post_body)
+            if "style" in post_body and "price" in post_body:
+                self._set_headers(201)
+                new_style= create_style(post_body)
+            else:
+                self._set_headers(400)
+                new_style = {
+                "message": f'{"style is required" if "style" not in post_body else ""} {"price is required" if "price" not in post_body else ""}'
+                }
             self.wfile.write(json.dumps(new_style).encode())
             
         if resource == "sizes":
-            new_size = create_size(post_body)
+            if "carets" in post_body and "price" in post_body:
+                self._set_headers(201)
+                new_size= create_size(post_body)
+            else:
+                self._set_headers(400)
+                new_size = {
+                "message": f'{"carets is required" if "carets" not in post_body else ""} {"price is required" if "price" not in post_body else ""}'
+                }
             self.wfile.write(json.dumps(new_size).encode())
     
     def do_DELETE(self):
         """Handles DELETE requests to the server"""
         # Set a 204 response code
-        self._set_headers(204)
-
+        # self._set_headers(204)
+        response = None
         # Parse the URL
         (resource, id) = self.parse_url(self.path)
 
         
         if resource == "metals":
+            self._set_headers(204)
             delete_metal(id)
+            response = ""
         
-        self.wfile.write("".encode())
-        if resource == "orders":
-            delete_order(id)
         
-        self.wfile.write("".encode())
+        
         if resource == "styles":
+            self._set_headers(204)
             delete_style(id)
+            response = ""
         
-        self.wfile.write("".encode())
         if resource == "sizes":
+            self._set_headers(204)
             delete_sizes(id)
-        
-        self.wfile.write("".encode())
+            response = ""
+            
+        if resource == "orders":
+            self._set_headers(405)
+            response = { "message": "Orders cannot be deleted by customers." }
+
+        self.wfile.write(json.dumps(response).encode())
 
     def do_PUT(self):
         """Handles PUT requests to the server"""
