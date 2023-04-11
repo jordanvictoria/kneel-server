@@ -38,6 +38,8 @@ def get_single_order(id):
             requested_order.pop("metalId", None)
             requested_order.pop("styleId", None)
             requested_order.pop("sizeId", None)
+            order_price = matching_metal["price"] + matching_size["price"] + matching_style["price"]
+            requested_order["price"] = order_price
 
     return requested_order
 def create_order(order):

@@ -1,5 +1,6 @@
 import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from urllib.parse import urlparse
 from views import get_all_orders, get_single_order, create_order, delete_order, update_order
 from views import get_all_styles, get_single_style, create_style, delete_style, update_style
 from views import get_all_sizes, get_single_size, create_size, delete_sizes, update_size
