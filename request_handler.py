@@ -1,6 +1,6 @@
 import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse
 from views import get_all_orders, get_single_order, update_order, create_order, delete_order, get_single_metal, get_all_metals, update_metal
 
 
@@ -10,22 +10,26 @@ class HandleRequests(BaseHTTPRequestHandler):
     """
     
     def parse_url(self, path):
-        """Parse the url into the resource and id"""
-        parsed_url = urlparse(path)
-        path_params = parsed_url.path.split('/')  
-        resource = path_params[1]
+        """PARSE."""
+        url_components = urlparse(path)
+        path_params = url_components.path.strip("/").split("/")
+        query_params = []
 
-        if parsed_url.query:
-            query = parse_qs(parsed_url.query)
-            return (resource, query)
+        if url_components.query != '':
+            query_params = url_components.query.split("&")
 
-        pk = None
+        resource = path_params[0]
+        id = None
+
         try:
-            pk = int(path_params[2])
-        except (IndexError, ValueError):
-            pass
-        return (resource, pk)
-   
+            id = int(path_params[1])
+        except IndexError:
+            pass  # No route parameter exists: /animals
+        except ValueError:
+            pass  # Request had trailing slash: /animals/
+
+        return (resource, id, query_params)
+
     def do_GET(self):
         """GET."""
         self._set_headers(200)
@@ -34,32 +38,26 @@ class HandleRequests(BaseHTTPRequestHandler):
 
         parsed = self.parse_url(self.path)
 
-        # if '?' not in self.path:
-        ( resource, id ) = parsed
+        if '?' not in self.path:
+            ( resource, id, query_params ) = parsed
 
-        if resource == "orders":
-            if id is not None:
-                response = get_single_order(id)
-            else:
-                response = get_all_orders()
+            if resource == "orders":
+                if id is not None:
+                    response = get_single_order(id)
+                else:
+                    response = get_all_orders()
 
-        if resource == "metals":
-            if id is not None:
-                response = get_single_metal(id)
-            else:
-                response = get_all_metals()
+            if resource == "metals":
+                if id is not None:
+                    response = get_single_metal(id)
+                else:
+                    response = get_all_metals(query_params)
 
-        # else:
-        #     (resource, query) = parsed
+        else:
+            (resource, id, query_params ) = parsed
 
-        #     if query.get('email') and resource == 'customers':
-        #         response = get_customers_by_email(query['email'][0])
-        #     if query.get('location_id') and resource == 'employees':
-        #         response = get_employees_by_location(query['location_id'][0])
-        #     if query.get('location_id') and resource == 'orders':
-        #         response = get_animals_by_location(query['location_id'][0])
-        #     if query.get('status') and resource == 'animals':
-        #         response = get_animals_by_status(query['status'][0])
+            if resource == 'metals':
+                response = get_all_metals(query_params)
 
         self.wfile.write(json.dumps(response).encode())
 
@@ -71,7 +69,7 @@ class HandleRequests(BaseHTTPRequestHandler):
         content_len = int(self.headers.get('content-length', 0))
         post_body = self.rfile.read(content_len)
         post_body = json.loads(post_body)
-        (resource, id) = self.parse_url(self.path)     
+        ( resource, id, query_params ) = self.parse_url(self.path)     
         response = None
 
         
@@ -86,7 +84,7 @@ class HandleRequests(BaseHTTPRequestHandler):
         post_body = self.rfile.read(content_len)
         post_body = json.loads(post_body)
 
-        (resource, id) = self.parse_url(self.path)
+        ( resource, id, query_params ) = self.parse_url(self.path)
 
         success = False
 
@@ -118,7 +116,7 @@ class HandleRequests(BaseHTTPRequestHandler):
         """Handles DELETE requests to the server"""
         self._set_headers(204)
 
-        (resource, id) = self.parse_url(self.path)
+        ( resource, id, query_params ) = self.parse_url(self.path)
 
         if resource == "orders":
             delete_order(id)
